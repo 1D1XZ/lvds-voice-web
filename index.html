@@ -1,0 +1,78 @@
+<!DOCTYPE html><html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LVDS Voice Web</title>
+  <script defer src="main.js"></script>
+  <style>
+    body { font-family: sans-serif; background: #111; color: #eee; text-align: center; padding: 2rem; }
+    input, button { padding: 0.5rem; margin: 0.5rem; border-radius: 6px; border: none; }
+    .muted { color: red; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>🔊 LVDS Voice Web</h1>  <input type="text" id="serverUrl" placeholder="Servidor VoiceChunk (ws://...)" size="40" />
+  <br/>
+  <input type="text" id="gamertag" placeholder="Tu Gamertag" size="30" />
+  <br/>
+  <button id="connectBtn">Conectar</button>
+  <br/>  <p id="status">Desconectado</p>  <h3>Jugadores Cercanos</h3>
+  <ul id="nearbyList"></ul>  <script>
+    let socket;
+    let audioStream;
+    let mediaRecorder;
+    let chunks = [];
+    let isMuted = false;
+
+    document.getElementById('connectBtn').onclick = async () => {
+      const url = document.getElementById('serverUrl').value;
+      const gamertag = document.getElementById('gamertag').value;
+      if (!url || !gamertag) return alert('Faltan datos');
+
+      document.getElementById('status').innerText = 'Conectando...';
+      socket = new WebSocket(url);
+
+      socket.onopen = async () => {
+        document.getElementById('status').innerText = '🟢 Conectado';
+
+        audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(audioStream);
+
+        mediaRecorder.ondataavailable = e => {
+          if (!isMuted) socket.send(e.data);
+        };
+
+        mediaRecorder.start(200); // cada 200ms manda un chunk
+
+        socket.send(JSON.stringify({ type: 'identify', gamertag }));
+      };
+
+      socket.onmessage = async msg => {
+        const data = msg.data;
+
+        // Si es audio binario
+        if (data instanceof Blob) {
+          const audio = new Audio(URL.createObjectURL(data));
+          audio.play();
+          return;
+        }
+
+        // Si es JSON (como la lista de jugadores)
+        const obj = JSON.parse(data);
+        if (obj.type === 'nearby') {
+          const list = document.getElementById('nearbyList');
+          list.innerHTML = '';
+          obj.players.forEach(player => {
+            const li = document.createElement('li');
+            li.textContent = player;
+            list.appendChild(li);
+          });
+        }
+      };
+
+      socket.onclose = () => {
+        document.getElementById('status').innerText = '🔴 Desconectado';
+      };
+    };
+  </script></body>
+</html>
