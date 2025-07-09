@@ -1,0 +1,19 @@
+body {
+  font-family: sans-serif;
+  background: #111;
+  color: #f2f2f2;
+  padding: 20px;
+}
+input, select {
+  margin-bottom: 10px;
+  display: block;
+  width: 200px;
+}
+button {
+  margin-top: 10px;
+  background: #444;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  cursor: pointer;
+}
